@@ -1,4 +1,8 @@
 openai 
 faiss-cpu 
 tiktoken
-
+sentence-transformers 
+transformers 
+accelerate
+pypdf
+ 

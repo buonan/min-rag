@@ -2,26 +2,41 @@ import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer
 from transformers import pipeline
+from pypdf import PdfReader
 
 # -----------------------------
-# 1. Embedding Model (Hugging Face)
+# 1. Load and extract text from PDF
 # -----------------------------
-embedder = SentenceTransformer("all-MiniLM-L6-v2")  # small + fast (~384d)
+def load_pdf(path):
+    reader = PdfReader(path)
+    text = ""
+    for page in reader.pages:
+        text += page.extract_text() + "\n"
+    return text
+
+# Example: replace with your PDF file path
+pdf_text = load_pdf("/home/brian/workspace/rag-ai/min-rag/example.pdf")
 
 # -----------------------------
-# 2. Sample document
+# 2. Chunk the document
 # -----------------------------
-document = """
-RAG stands for Retrieval-Augmented Generation.
-It combines information retrieval with large language models.
-RAG reduces hallucination by grounding answers in external data.
-It is commonly used with vector databases like FAISS or Pinecone.
-"""
-chunks = [c.strip() for c in document.split("\n") if c.strip()]
+def chunk_text(text, chunk_size=300, overlap=50):
+    words = text.split()
+    chunks = []
+    start = 0
+    while start < len(words):
+        end = start + chunk_size
+        chunk = " ".join(words[start:end])
+        chunks.append(chunk)
+        start += chunk_size - overlap
+    return chunks
+
+chunks = chunk_text(pdf_text)
 
 # -----------------------------
-# 3. Embed chunks
+# 3. Embeddings with Hugging Face
 # -----------------------------
+embedder = SentenceTransformer("all-MiniLM-L6-v2")
 embeddings = embedder.encode(chunks, convert_to_numpy=True)
 
 # -----------------------------
@@ -34,10 +49,10 @@ index.add(embeddings)
 # -----------------------------
 # 5. Query
 # -----------------------------
-query = "What is RAG and why is it useful?"
+query = "Summarize the key ideas from this PDF."
 query_emb = embedder.encode([query], convert_to_numpy=True)
 
-D, I = index.search(query_emb, k=2)
+D, I = index.search(query_emb, k=3)
 retrieved_chunks = [chunks[i] for i in I[0]]
 
 # -----------------------------
@@ -60,12 +75,10 @@ Answer:
 # 7. Hugging Face LLM for generation
 # -----------------------------
 generator = pipeline(
-    "text-generation",
-    model="mistralai/Mistral-7B-Instruct-v0.2",  # ✅ free instruct model
-    device_map="auto"  # uses GPU if available
+    "text2text-generation",
+    model="google/flan-t5-base"  # smaller CPU-friendly model
 )
 
-response = generator(prompt, max_new_tokens=200, do_sample=True, temperature=0.7)
-
+response = generator(prompt, max_new_tokens=200)
 print("Answer:", response[0]["generated_text"])
 
