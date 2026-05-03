@@ -1,9 +1,11 @@
 import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer
-from transformers import pipeline
+from transformers import pipeline, logging as hf_logging
 from pypdf import PdfReader
 import glob
+
+hf_logging.set_verbosity_error()
 
 # -----------------------------
 # 1. Load and chunk PDFs
@@ -36,12 +38,12 @@ for pdf_file in pdf_files:
     chunks = chunk_text(text)
     all_chunks.extend(chunks)
 
-print(f"Loaded {len(all_chunks)} chunks from {len(pdf_files)} PDFs.")
+print(f"Loaded {len(all_chunks)} chunks from {len(pdf_files)} PDFs: {pdf_files}")
 
 # -----------------------------
 # 2. Embeddings
 # -----------------------------
-embedder = SentenceTransformer("all-MiniLM-L6-v2")
+embedder = SentenceTransformer("sentence-transformers/all-MiniLM-L12-v2")
 embeddings = embedder.encode(all_chunks, convert_to_numpy=True)
 
 # -----------------------------
@@ -55,8 +57,9 @@ index.add(embeddings)
 # 4. Hugging Face LLM
 # -----------------------------
 generator = pipeline(
-    "text2text-generation",
-    model="google/flan-t5-base"
+    "text-generation",
+    model="mistralai/Mistral-7B-Instruct-v0.2",
+    device_map="auto"
 )
 
 # -----------------------------
@@ -90,7 +93,17 @@ Question:
 Answer:
 """
     # Generate answer
-    response = generator(prompt, max_new_tokens=300)
-    print("\nAnswer:", response[0]["generated_text"])
-    print("-" * 80)
+    response = generator(prompt, generation_config={"max_new_tokens": 300})
+    answer = response[0]["generated_text"].replace(prompt, "").strip()
+    
+    print("\n" + "=" * 80)
+    print("ANSWER:")
+    print("=" * 80)
+    print(answer)
+    print("\n" + "=" * 80)
+    print("SOURCES (Top 3 relevant chunks):")
+    print("=" * 80)
+    for i, chunk in enumerate(retrieved_chunks[:3], 1):
+        print(f"\n[{i}] {chunk[:200]}...")
+    print("\n" + "=" * 80 + "\n")
 

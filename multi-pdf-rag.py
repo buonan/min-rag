@@ -86,11 +86,22 @@ Answer:
 
 # 7. Hugging Face LLM (Flan-T5, works offline, no login required)
 generator = pipeline(
-    "text2text-generation",
+    "text-generation",
     model="google/flan-t5-base"  # ✅ smaller & open
 )
 
 response = generator(prompt, max_new_tokens=200)
-print("Answer:", response[0]["generated_text"])
+answer = response[0]["generated_text"].replace(prompt, "").strip()
+
+print("\n" + "=" * 80)
+print("ANSWER:")
+print("=" * 80)
+print(answer)
+print("\n" + "=" * 80)
+print("SOURCES (Top 3 relevant chunks):")
+print("=" * 80)
+for i, chunk in enumerate(retrieved_chunks[:3], 1):
+    print(f"\n[{i}] {chunk[:200]}...")
+print("\n" + "=" * 80)
 
 
