@@ -15,7 +15,8 @@ source environment
 
 ## How to Run
 ```
-python interactive-multi-pdf-rag.py
+python interactive-multi-pdf-rag.py --pdf-dir pdfs/example
+
 ```
 
 # Copy more pdfs

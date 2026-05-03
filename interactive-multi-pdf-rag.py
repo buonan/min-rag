@@ -1,9 +1,14 @@
+import argparse
 import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer
 from transformers import pipeline, logging as hf_logging
 from pypdf import PdfReader
 import glob
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--pdf-dir", default="pdfs/realestate", help="Folder containing PDFs")
+args = parser.parse_args()
 
 hf_logging.set_verbosity_error()
 
@@ -31,7 +36,7 @@ def chunk_text(text, chunk_size=300, overlap=50):
     return chunks
 
 # Load all PDFs from folder
-pdf_files = glob.glob("pdfs/example/*.pdf")  # folder with PDFs
+pdf_files = glob.glob(f"{args.pdf_dir}/*.pdf")
 all_chunks = []
 for pdf_file in pdf_files:
     text = load_pdf(pdf_file)
@@ -93,7 +98,7 @@ Question:
 Answer:
 """
     # Generate answer
-    response = generator(prompt, generation_config={"max_new_tokens": 300})
+    response = generator(prompt, max_new_tokens=300)
     answer = response[0]["generated_text"].replace(prompt, "").strip()
     
     print("\n" + "=" * 80)
