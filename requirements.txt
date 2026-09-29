@@ -6,3 +6,5 @@ transformers
 accelerate
 pypdf
 cryptography
+llama-cpp-python
+
